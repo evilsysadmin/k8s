@@ -1,0 +1,4 @@
+- minikube cluster (setup local repository)
+- setup kube context (coexist with eks profiles)
+- makefile (build image , push image to repository , deploy app)
+- helm deployment (nginx container)
