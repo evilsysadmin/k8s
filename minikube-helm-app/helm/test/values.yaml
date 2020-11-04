@@ -5,12 +5,15 @@
 replicaCount: 1
 
 image:
+  phpfpm:
+    repository: 192.168.99.116:5000/test
+    tag: latest
+    pullPolicy: Always
   nginx:
-    name: nginx
-    version: latest
-    pullPolicy: IfNotPresent
-  # Overrides the image tag whose default is the chart appVersion.
-  tag: ""
+    repository: nginx
+    tag: 1.16-alpine
+    pullPolicy: Always
+    port: 8080
 
 imagePullSecrets: []
 nameOverride: ""
@@ -39,7 +42,7 @@ securityContext: {}
   # runAsUser: 1000
 
 service:
-  type: ClusterIP
+  type: LoadBalancer
   port: 80
 
 ingress:
@@ -79,3 +82,6 @@ nodeSelector: {}
 tolerations: []
 
 affinity: {}
+
+securityContext:
+  runAsUser: 65534 #nobody

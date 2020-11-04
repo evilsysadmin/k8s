@@ -19,6 +19,8 @@ spec:
     {{- end }}
       labels:
         {{- include "test.selectorLabels" . | nindent 8 }}
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
     spec:
       {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
@@ -27,24 +29,41 @@ spec:
       serviceAccountName: {{ include "test.serviceAccountName" . }}
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      volumes:
+        - name: shared-socket
+          emptyDir:
+            medium: "Memory"
+        - name: nginx-config
+          configMap:
+            name: nginx-config
+        - name: php-config
+          configMap:
+            name: php-config
       containers:
         - name: nginx
           securityContext:
             {{- toYaml .Values.securityContext | nindent 12 }}
-          image: "{{ .Values.image.nginx.name }}:{{ .Values.image.nginx.version }}"
+          image: "{{ .Values.image.nginx.repository }}:{{ .Values.image.nginx.tag }}"
           imagePullPolicy: {{ .Values.image.nginx.pullPolicy }}
+          volumeMounts:
+            - name: shared-socket
+              mountPath: /socket
+              readOnly: true
+            - name: nginx-config
+              mountPath: /etc/nginx/nginx.conf
+              subPath: nginx.conf
+            - name: nginx-config
+              mountPath: /etc/nginx/fastcgi.conf
+              subPath: fastcgi.conf
           ports:
             - name: http
-              containerPort: 80
+              containerPort: {{ .Values.image.nginx.port }}
               protocol: TCP
-          livenessProbe:
-            httpGet:
-              path: /
-              port: http
           readinessProbe:
+            timeoutSeconds: 3
             httpGet:
-              path: /
-              port: http
+              path: /healthz
+              port: {{ .Values.image.nginx.port }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
       {{- with .Values.nodeSelector }}
@@ -59,3 +78,31 @@ spec:
       tolerations:
         {{- toYaml . | nindent 8 }}
       {{- end }}
+        - name: phpfpm
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.image.phpfpm.repository }}:{{ .Values.image.phpfpm.tag }}"
+          imagePullPolicy: {{ .Values.image.phpfpm.pullPolicy }}
+          volumeMounts:
+            - name: shared-socket
+              mountPath: /socket
+            - name: php-config
+              mountPath: /usr/local/etc/php/php.ini
+              subPath: php.ini
+            - name: php-config
+              mountPath: /usr/local/etc/php-fpm.d/zzz-pool.conf
+              subPath: zzz-pool.conf      
+          resources:
+            {{- toYaml .Values.resources.phpfpm | nindent 12 }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
+    {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
