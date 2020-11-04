@@ -1,0 +1,20 @@
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nginx-config
+data:
+  nginx.conf: |-
+    {{- .Files.Get "conf/nginx/nginx.conf" | nindent 4 }}
+  fastcgi.conf: |-
+    {{- .Files.Get "conf/nginx/fastcgi.conf" | nindent 4 }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: php-config
+data:
+  php.ini: |-
+    {{- .Files.Get "conf/php/php.ini" | nindent 4 }}
+  zzz-pool.conf: |-
+    {{- .Files.Get "conf/php/zzz-pool.conf" | nindent 4 }}
